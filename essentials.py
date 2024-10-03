@@ -1,34 +1,4 @@
 blacklist = open('blacklist.csv', 'r').read().split('\n')
-
-
-input_actions = ['add', 'remove']
-input_exec = []
-
-
-for action in input_actions:
-    input_func = f"""
-@bot.CLIENT.command(name='{action}')
-async def perform_{action}(ctx):
-    try:
-        message_content = str(ctx.message.content.split(' ')[2])
-        if message_content == '':
-            return await ctx.reply("> Umm do I look like I read minds?")
-        else:
-            if message_content not in blacklist:
-                action_result = bot.get_response(response_initialization='{action}', user_input=message_content)
-                return await ctx.reply("> " + action_result)    
-            else:
-                return await ctx.reply("> This value is blacklisted")    
-    except Forbidden as e:
-        log.write(str(e))
-        return await ctx.reply("> I don't have permission to {action}")
-    except HTTPException as e:
-        log.write(str(e))
-        return await ctx.reply(f"> An error occurred while trying to {action}") 
-    except Exception as e:
-        log.write(str(e))
-        return await ctx.reply(bot.get_response('helpme'))
-    """
     
 kiss = [
     "{zao} says that :flag_pt: ronaldo :fire: > :flag_ar: messi :x: and {user} agrees :+1:",
