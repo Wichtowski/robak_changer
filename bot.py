@@ -34,28 +34,20 @@ class DiscordBot():
         
         self.GLOBAL_LOGGER.write(f'Bot is ready as {self.CLIENT.user}', 0)
         self.GLOBAL_LOGGER.write("Global Logger initialized", 0)
-        
 
     # Class Utils
     def get_response(self, response_initialization: str, guild_id: int = 0, user_input: str = "") -> str:
         if user_input != "":                
-            def sanitize_input(user_input: str) -> str:
-                lang = open(f"{str(guild_id)}/lang.csv", 'r', encoding=self.FILE_UTILS.ENCODING).read().strip()
-                match lang:
-                    case 'pl':
-                    # Allow alphanumeric characters, Polish special chars, and some punctuation
-                        sanitized = re.sub(r'[^a-zA-Z\s\-_ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]', '', user_input)
-                    case 'en' | _:
-                        sanitized = re.sub(r'[^a-zA-Z\s\-_]', '', user_input)
-                return sanitized
-
+                
             user_input_lower: str = user_input.lower()
             if response_initialization != 'setlang':
                 user_input_lower = user_input_lower.capitalize()
             else:
                 if user_input_lower not in country_codes:
                     return "Invalid language code"
-            user_input_lower = sanitize_input(user_input_lower)
+            
+            lang = self.FILE_UTILS.get_lang()
+            user_input_lower = self.FILE_UTILS.sanitize_lang(lang)
 
         match response_initialization:
             case 'generate':

@@ -105,7 +105,7 @@ class FileUtils:
             return f"Language set to {lang}"
         except Exception as e:
             raise Exception(f"Error while setting language to {lang}")
-        
+
     def get_lang(self, guild_id: int) -> str:
         """Returns the language for the given guild."""
         try:
@@ -114,19 +114,31 @@ class FileUtils:
         except Exception as e:
             raise Exception("Error while getting language")
 
+    def sanitize_lang(self, lang) -> str:
+        try:
+            match lang:
+                case 'pl':
+                # Allow alphanumeric characters, Polish special chars, and some punctuation
+                    sanitized = re.sub(r'[^a-zA-Z\s\-_ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]', '', user_input)
+                case 'en' | _:
+                    sanitized = re.sub(r'[^a-zA-Z\s\-_]', '', user_input)
+            return sanitized
+        except Exception as e:
+            raise Exception("Error while sanitizing language")
+
     def __fix_lang(self, guild_id: int, n1, n2) -> str:
         """Fixes the last letters of all nicknames from the CSV file based on a predefined rule for given language."""
         try:
-            guild_lang = self.__read_csv_file(f"{str(guild_id)}/{self.__LANG}")
-            match guild_lang[0]:
+            guild_lang = self.__read_csv_file(f"{str(guild_id)}/{self.__LANG}").read().strip()
+            match guild_lang:
                 case 'pl':
                     return self.__fix_pl_nicks(n1, n2)
-                case _:
+                case 'en' | _:
                     return f"{n1} {n2}"
             return f"{n1} {n2}"
         except Exception as e:
             return f"{n1} {n2}"
-
+        
     def __read_csv_file(self, file_path: str) -> List[str]:
         """Reads nicknames from the CSV file and returns them as a list of strings."""
         file_content: List[str] = []
