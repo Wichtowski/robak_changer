@@ -10,7 +10,6 @@ from pathlib import Path
 from random import choice
 import asyncio
 import os
-import re
 
 
 class DiscordBot():
@@ -46,8 +45,8 @@ class DiscordBot():
                 if user_input_lower not in country_codes:
                     return "Invalid language code"
             
-            lang = self.FILE_UTILS.get_lang()
-            user_input_lower = self.FILE_UTILS.sanitize_lang(lang)
+            lang = self.FILE_UTILS.get_lang(guild_id)
+            user_input_lower = self.FILE_UTILS.sanitize_lang(lang, user_input)
 
         match response_initialization:
             case 'generate':
@@ -87,7 +86,7 @@ class DiscordBot():
 
     async def event_on_message(self, message) -> Coroutine | None:
         if message.author.id == self.ZAO and any(domain in message.content for domain in ['x.com', 'twitter.com', 'vxtwitter.com']):
-            return await message.add_reaction('💤')
+            return await message.reply("fajne")
         else:
             return
 
@@ -200,12 +199,9 @@ class DiscordBot():
             action_result = self.get_response('zao', guild_id)
 
             # Send the message and ask for reactions (poll)
-            poll_message = await ctx.send(f"> Pool for change <@{member.id}> to **{action_result}**? React with 🔥 for yes or 💩 for no.")
+            poll_message = await ctx.send(f"> Pool for change <@{member.id}> to **{action_result}**?")
             await poll_message.add_reaction("🔥")
             await poll_message.add_reaction("💩")
-
-            def check(reaction, user):
-                return user != ctx.bot.user and str(reaction.emoji) in ["🔥", "💩"] and reaction.message.id == poll_message.id
 
             reaction_counts = {
                 "🔥": 0,
@@ -213,27 +209,39 @@ class DiscordBot():
             }
             reaction_threshold = 5
             timeout = 15.0
+
+            def check(reaction, user):
+                return user != self.CLIENT.user and str(reaction.emoji) in reaction_counts
+
             try:
                 while reaction_counts["🔥"] < reaction_threshold and reaction_counts["💩"] < reaction_threshold:
                     try:
                         reaction, user = await self.CLIENT.wait_for('reaction_add', timeout=timeout, check=check)
 
-                        if str(reaction.emoji) in reaction_counts:
-                            for r in poll_message.reactions:
-                                if str(r.emoji) == reaction.emoji:
-                                    reaction_counts[str(r.emoji)] = r.count - 1
+                        poll_message = await poll_message.channel.fetch_message(poll_message.id)
+
+                        # Update the reaction counts
+                        for r in poll_message.reactions:
+                            if str(r.emoji) in reaction_counts:
+                                reaction_counts[str(r.emoji)] = r.count - 1  # -1 to exclude the bot's own reaction
+
+                        # Check if any threshold is reached
                         if reaction_counts["🔥"] >= reaction_threshold:
                             await member.edit(action_result)
                             return await ctx.reply(f"> Nickname changed to **{action_result}** for Żao by democracy")
                         elif reaction_counts["💩"] >= reaction_threshold:
                             return await ctx.reply("> Nickname change for Żao was rejected by popular vote")
-                    except TimeoutError:
+
+                    except asyncio.TimeoutError:
                         break
-                if reaction_counts["🔥"] - 1 == 0 and reaction_counts["💩"] - 1 == 0:
-                    return await poll_message.edit(content="> No one voted, no nickname change for Żao")
+
+                if reaction_counts["🔥"] == 0 and reaction_counts["💩"] == 0:
+                    return await poll_message.edit(content=f"> No one voted, no nickname change for Żao")
+                
                 elif reaction_counts["🔥"] > reaction_counts["💩"]:
                     await member.edit(action_result)
                     return await poll_message.edit(content=f"> Nickname changed to **{action_result}** for Żao")
+                
                 elif reaction_counts["🔥"] == reaction_counts["💩"]:
                     await poll_message.edit(content="> Poll ended in a tie, time for a coin flip")
                     await asyncio.sleep(3)
@@ -241,10 +249,13 @@ class DiscordBot():
                     if "changed" in result_message:
                         await member.edit(action_result)
                     return await poll_message.edit(content=result_message)
+                
                 else:
                     return await poll_message.edit(content=f"> {action_result} rejected")
-            except TimeoutError:
+
+            except asyncio.TimeoutError:
                 return await ctx.reply("> Poll timed out, no nickname change for Żao")
+
         except Forbidden as e:
             self.ERR_LOG.write("Forbidden", guild_id)
             return await ctx.reply("> You don't have permission to change nicknames for Żao")
@@ -303,6 +314,15 @@ class DiscordBot():
     async def command_perform_helpme(self, ctx) -> Coroutine:
         return await self.__command_empty_template(ctx, 'helpme')
 
+    async def command_perform_add(self, ctx) -> Coroutine:
+        return await self.__command_input_template(ctx, 'add')
+    
+    async def command_perform_remove(self, ctx) -> Coroutine:
+        return await self.__command_input_template(ctx, 'remove')
+
+    async def command_perform_setlang(self, ctx) -> Coroutine:
+        return await self.__command_input_template(ctx, 'setlang')
+
     async def __command_empty_template(self, ctx, action) -> Coroutine:
         try:
             guild_id = ctx.guild.id
@@ -317,15 +337,6 @@ class DiscordBot():
         except Exception as e:
             self.ERR_LOG.write(str(e) + f" for {action}", guild_id)
             return await ctx.reply(f"> Error performing {action}\n" + self.get_response('helpme', guild_id))
-
-    async def command_perform_add(self, ctx) -> Coroutine:
-        return await self.__command_input_template(ctx, 'add')
-    
-    async def command_perform_remove(self, ctx) -> Coroutine:
-        return await self.__command_input_template(ctx, 'remove')
-
-    async def command_perform_setlang(self, ctx) -> Coroutine:
-        return await self.__command_input_template(ctx, 'setlang')
 
     async def __command_input_template(self, ctx, action: str) -> Coroutine:
         guild_id = ctx.guild.id

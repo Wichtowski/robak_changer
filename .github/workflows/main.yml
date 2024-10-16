@@ -1,14 +1,13 @@
 name: Deploy to VPS
 
 on:
-  push:
+  push:      
     branches:
       - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,9 +19,13 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H  ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Remove .py files
+        run: |
+          find . -name "./*.py" -type f -delete
+
       - name: Copy files to VPS
         run: |
-          scp -r ./your_directory_or_file_to_copy ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/path/to/remote/directory
+          scp -r ./your_directory_or_file_to_copy ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:robak_changer
 
       - name: Run remote commands
         run: |

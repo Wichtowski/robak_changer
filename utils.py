@@ -1,9 +1,9 @@
 import os
-import logging
 from typing import Final, List, Dict
 from random import choice, randint as ri
 from dotenv import load_dotenv
 from itertools import permutations
+import re
 
 class FileUtils:
     def __init__(self):
@@ -114,7 +114,7 @@ class FileUtils:
         except Exception as e:
             raise Exception("Error while getting language")
 
-    def sanitize_lang(self, lang) -> str:
+    def sanitize_lang(self, lang, user_input: str) -> str:
         try:
             match lang:
                 case 'pl':
@@ -129,7 +129,7 @@ class FileUtils:
     def __fix_lang(self, guild_id: int, n1, n2) -> str:
         """Fixes the last letters of all nicknames from the CSV file based on a predefined rule for given language."""
         try:
-            guild_lang = self.__read_csv_file(f"{str(guild_id)}/{self.__LANG}").read().strip()
+            guild_lang = self.__read_csv_file(f"{str(guild_id)}/{self.__LANG}")[0]
             match guild_lang:
                 case 'pl':
                     return self.__fix_pl_nicks(n1, n2)
