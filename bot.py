@@ -198,8 +198,7 @@ class DiscordBot():
             
             action_result = self.get_response('zao', guild_id)
 
-            # Send the message and ask for reactions (poll)
-            poll_message = await ctx.send(f"> Pool for change <@{member.id}> to **{action_result}**?")
+            poll_message = await ctx.send(f"> Pool for changing Żao to **{action_result}**?")
             await poll_message.add_reaction("🔥")
             await poll_message.add_reaction("💩")
 
@@ -207,8 +206,8 @@ class DiscordBot():
                 "🔥": 0,
                 "💩": 0
             }
-            reaction_threshold = 5
-            timeout = 15.0
+            reaction_threshold = 2
+            timeout = 3.0
 
             def check(reaction, user):
                 return user != self.CLIENT.user and str(reaction.emoji) in reaction_counts
@@ -220,35 +219,33 @@ class DiscordBot():
 
                         poll_message = await poll_message.channel.fetch_message(poll_message.id)
 
-                        # Update the reaction counts
                         for r in poll_message.reactions:
                             if str(r.emoji) in reaction_counts:
                                 reaction_counts[str(r.emoji)] = r.count - 1  # -1 to exclude the bot's own reaction
 
-                        # Check if any threshold is reached
                         if reaction_counts["🔥"] >= reaction_threshold:
-                            await member.edit(action_result)
-                            return await ctx.reply(f"> Nickname changed to **{action_result}** for Żao by democracy")
+                            await member.edit(nick=action_result)
+                            return await ctx.reply(f"> Żao nicknamed forced to **{action_result}** by democracy")
                         elif reaction_counts["💩"] >= reaction_threshold:
-                            return await ctx.reply("> Nickname change for Żao was rejected by popular vote")
-
+                            return await ctx.reply("> Nickname rejected by democracy")
                     except asyncio.TimeoutError:
                         break
 
                 if reaction_counts["🔥"] == 0 and reaction_counts["💩"] == 0:
-                    return await poll_message.edit(content=f"> No one voted, no nickname change for Żao")
+                    return await poll_message.reply(content=f"> No one voted")
                 
                 elif reaction_counts["🔥"] > reaction_counts["💩"]:
-                    await member.edit(action_result)
-                    return await poll_message.edit(content=f"> Nickname changed to **{action_result}** for Żao")
+                    await member.edit(nick=action_result)
+                    return await poll_message.reply(content=f"> Nickname changed to **{action_result}** for Żao")
                 
-                elif reaction_counts["🔥"] == reaction_counts["💩"]:
-                    await poll_message.edit(content="> Poll ended in a tie, time for a coin flip")
+                elif reaction_counts["🔥"] == reaction_counts["💩"] and reaction_counts["🔥"] != 0 and reaction_counts["💩"] != 0:
+                    
+                    coin_flip = await poll_message.reply(content="> Poll ended in a tie, time for a coin flip")
                     await asyncio.sleep(3)
                     result_message = f"> Nickname changed to **{action_result}** for Żao" if choice([True, False]) else f"> {action_result} rejected"
                     if "changed" in result_message:
-                        await member.edit(action_result)
-                    return await poll_message.edit(content=result_message)
+                        await member.edit(nick=action_result)
+                    return await coin_flip.reply(content=result_message)
                 
                 else:
                     return await poll_message.edit(content=f"> {action_result} rejected")
@@ -261,7 +258,7 @@ class DiscordBot():
             return await ctx.reply("> You don't have permission to change nicknames for Żao")
         except HTTPException as e:
             self.ERR_LOG.write("HTTP Exception thrown", guild_id)
-            return await ctx.send("> erm... http exception\n")
+            return await ctx.reply("> erm... http exception\n")
         except Exception as e:
             self.ERR_LOG.write(str(e), guild_id)
             return await ctx.reply("> Exception")
