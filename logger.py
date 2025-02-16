@@ -1,19 +1,40 @@
-from datetime import datetime
+import logging
+from pathlib import Path
+from typing import Dict
+from config import BotConfig
 
 class CustomLogger:
-    def __init__(self, log_name: str):
-        """Initialize the logger and redirect print statements to the log file. Pass only name of the file without extension."""
-        self.log_file = "logs/" + log_name + '.log'
-
-    def write(self, message: str, guild_id) -> None:
-        """Write a message to the log file."""
-        if guild_id == 0:
-            with open(f'{self.log_file}', 'a') as log_file:
-                log_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - INFO - {message.strip()}\n")
-        else:
-            if message.strip():
-                with open(f"{str(guild_id)}/{self.log_file}", 'a') as log_file:
-                    log_file.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - INFO - {message.strip()}\n")
+    _loggers: Dict[str, logging.Logger] = {}
+    
+    def __init__(self, name: str):
+        if name in self._loggers:
+            self.logger = self._loggers[name]
+            return
+            
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        
+        # File handler
+        log_file = BotConfig.BASE_DIR / "logs" / f"{name}.log"
+        log_file.parent.mkdir(exist_ok=True)
+        
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+        
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
+        
+        self._loggers[name] = self.logger
+    
+    def write(self, message: str, guild_id: int = 0) -> None:
+        self.logger.info(f"Guild {guild_id}: {message}")
 
     def flush(self) -> None:
         """Flush the stream (required for compatibility)."""
