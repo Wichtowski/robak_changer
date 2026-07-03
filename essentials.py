@@ -20,40 +20,32 @@ kiss = [
     "{user} and {zao} stroke together :joy:",
 ]
 
-menu = "### !robak command_name\n" \
-        "> **helpme**: Get help\n" \
-        "> **generate** Generate me a new nickname!\n" \
-        "> **add** Adds a new nick to the list\n" \
-        "> **remove** Remove a nickname\n" \
-        "> **setlang** Set language\n" \
-        "> **all** List all nicknames\n" \
-        "> **last** List last 10 nicknames\n" \
-        "> **endorsed** List most endorsed nicknames\n" \
-        "> **zao** <- love this guy he a fren\n" \
-        "> **kiss** :flushed:\n" \
-        "> **?**: More\n"
-
-helpme = """### _!robak_ command_name\n
-```
-helpme   | Get help
-generate | Generate a new nickname!
-add      | Add a new nickname to the list
-remove   | Remove a nickname from the list
-setlang  | Set the preferred language
-all      | List all nicknames
-last     | List the last 10 nicknames
-endorsed | List the most endorsed nicknames
-zao      | Love this guy, he's a fren!
-kiss     | :flushed: Send a kiss!
-?        | Get more information```"""
-
 country_codes = [
-    "pl",  # Polish
-    "en",  # English
-    "fr",  # French
-    "de",  # German
-    "jp",  # Japanese
-    "in",  # Indian
-    "cn",  # Chinese
-    "sp",  # Spanish
+    "ar",
+    "bg",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "en",
+    "es",
+    "fi",
+    "fr",
+    "he",
+    "hi",
+    "hu",
+    "it",
+    "ja",
+    "ko",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sv",
+    "tr",
+    "uk",
+    "vi",
+    "zh",
 ]

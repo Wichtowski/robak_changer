@@ -1,10 +1,9 @@
-from typing import Coroutine
-
 import discord
 from discord import HTTPException, Forbidden, app_commands
 
 from bot import DiscordBot
 from config import BotConfig
+from essentials import country_codes
 
 
 class GenerateNicknameView(discord.ui.View):
@@ -15,6 +14,8 @@ class GenerateNicknameView(discord.ui.View):
         self.action_result = action_result
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.guild_id is not None and not self.bot.can_respond_to_guild(interaction.guild_id):
+            return False
         if interaction.user.id == self.author_id:
             return True
         await interaction.response.send_message("> This nickname is not yours to decide", ephemeral=True)
@@ -48,18 +49,40 @@ def guild_id_from_interaction(interaction: discord.Interaction) -> int | None:
     return interaction.guild_id
 
 
+async def guarded_guild_id(interaction: discord.Interaction, bot: DiscordBot) -> int | None:
+    guild_id = guild_id_from_interaction(interaction)
+    if guild_id is None:
+        await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+        return None
+    if not bot.can_respond_to_guild(guild_id):
+        return None
+    return guild_id
+
+
+async def language_autocomplete(
+    interaction: discord.Interaction,
+    current: str,
+) -> list[app_commands.Choice[str]]:
+    current = current.lower()
+    matches = [
+        code
+        for code in country_codes
+        if code.startswith(current)
+    ][:25]
+    return [
+        app_commands.Choice(name=code, value=code)
+        for code in matches
+    ]
+
+
 def create_slash_group(bot: DiscordBot) -> app_commands.Group:
     robak = app_commands.Group(name="robak", description="Robak nickname commands")
 
-    @robak.command(name="helpme", description="Show Robak help")
-    async def slash_helpme(interaction: discord.Interaction):
-        await send_interaction_message(interaction, bot.get_response("helpme"))
-
     @robak.command(name="generate", description="Generate a nickname and choose whether to apply it")
     async def slash_generate(interaction: discord.Interaction):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         generation = bot.generate_nickname(guild_id)
         if not generation.succeeded:
@@ -71,9 +94,9 @@ def create_slash_group(bot: DiscordBot) -> app_commands.Group:
     @robak.command(name="add", description="Add a nickname to the list")
     @app_commands.describe(nickname="Nickname to add")
     async def slash_add(interaction: discord.Interaction, nickname: str):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         action_result = bot.get_input_response("add", guild_id, nickname)
         await send_interaction_message(interaction, f"> {action_result}")
@@ -81,18 +104,18 @@ def create_slash_group(bot: DiscordBot) -> app_commands.Group:
     @robak.command(name="remove", description="Remove a nickname from the list")
     @app_commands.describe(nickname="Nickname to remove")
     async def slash_remove(interaction: discord.Interaction, nickname: str):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         action_result = bot.get_input_response("remove", guild_id, nickname)
         await send_interaction_message(interaction, f"> {action_result}")
 
     @robak.command(name="all", description="List all nicknames")
     async def slash_all(interaction: discord.Interaction):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         message_content = bot.get_response("all", guild_id)
         chunks = [
@@ -106,35 +129,36 @@ def create_slash_group(bot: DiscordBot) -> app_commands.Group:
 
     @robak.command(name="last", description="List the last generated nicknames")
     async def slash_last(interaction: discord.Interaction):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         await send_interaction_message(interaction, bot.get_response("last", guild_id))
 
     @robak.command(name="endorsed", description="List the most endorsed nicknames")
     async def slash_endorsed(interaction: discord.Interaction):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         await send_interaction_message(interaction, bot.get_response("endorsed", guild_id))
 
     @robak.command(name="setlang", description="Set the preferred language")
     @app_commands.describe(lang="Language code, for example en or pl")
+    @app_commands.autocomplete(lang=language_autocomplete)
     async def slash_setlang(interaction: discord.Interaction, lang: str):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         action_result = bot.get_input_response("setlang", guild_id, lang)
         await send_interaction_message(interaction, f"> {action_result}")
 
     @robak.command(name="generate-zao", description="Generate a nickname for Żao")
     async def slash_generate_zao(interaction: discord.Interaction):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         generation = bot.generate_nickname(guild_id, who="zaojoga")
         if not generation.succeeded:
@@ -145,9 +169,9 @@ def create_slash_group(bot: DiscordBot) -> app_commands.Group:
     @robak.command(name="kiss", description="Send a kiss")
     @app_commands.describe(member="Optional member to target")
     async def slash_kiss(interaction: discord.Interaction, member: discord.Member | None = None):
-        guild_id = guild_id_from_interaction(interaction)
+        guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None or interaction.guild is None:
-            return await send_interaction_message(interaction, "> This command can only be used in a server", ephemeral=True)
+            return
 
         mentions = [member] if member else []
         action_result = bot.get_kiss_response(interaction.guild, interaction.user, mentions)
@@ -155,10 +179,16 @@ def create_slash_group(bot: DiscordBot) -> app_commands.Group:
 
     @robak.command(name="sigma", description="Sigma")
     async def slash_sigma(interaction: discord.Interaction):
+        guild_id = await guarded_guild_id(interaction, bot)
+        if guild_id is None:
+            return
         await send_interaction_message(interaction, bot.get_response("sigma"))
 
     @robak.command(name="more", description="More information")
     async def slash_more(interaction: discord.Interaction):
+        guild_id = await guarded_guild_id(interaction, bot)
+        if guild_id is None:
+            return
         await send_interaction_message(interaction, bot.get_response("?"))
 
     return robak
@@ -173,74 +203,13 @@ def setup_bot() -> DiscordBot:
         await bot.event_on_ready()
 
     @client.event
-    async def on_command(ctx):
-        await bot.event_on_command(ctx)
-
-    @client.event
-    async def on_command_error(ctx, error):
-        await bot.event_on_command_error(ctx, error)
-
-    @client.event
     async def on_message(message):
         await bot.event_on_message(message)
-        await bot.CLIENT.process_commands(message)
 
     @client.event
     async def on_guild_join(guild):
         await bot.event_on_guild_join(guild.id)
 
-    @client.command(name="helpme")
-    async def perform_helpme(ctx):
-        return await bot.command_perform_helpme(ctx)
-
-    @client.command(name="generate")
-    async def perform_generate(ctx):
-        return await bot.command_perform_generate(ctx)
-
-    @client.command(name="add")
-    async def perform_add(ctx, *, nickname: str):
-        return await bot.command_perform_add(ctx, nickname)
-
-    @client.command(name="remove")
-    async def perform_remove(ctx, *, nickname: str):
-        return await bot.command_perform_remove(ctx, nickname)
-
-    @client.command(name="all")
-    async def perform_all(ctx) -> Coroutine:
-        return await bot.command_perform_all(ctx)
-
-    @client.command(name="last")
-    async def perform_last(ctx) -> Coroutine:
-        return await bot.command_perform_last(ctx)
-
-    @client.command(name="endorsed")
-    async def perform_endorsed(ctx) -> Coroutine:
-        return await bot.command_perform_endorsed(ctx)
-
-    @client.command(name="zao")
-    async def perform_gen_zao(ctx) -> Coroutine:
-        return await bot.command_perform_zao(ctx)
-
-    @client.command(name="kiss")
-    async def perform_kiss(ctx) -> Coroutine:
-        return await bot.command_perform_kiss(ctx)
-
-    @client.command(name="sigma")
-    async def perform_sigma(ctx) -> Coroutine:
-        return await bot.command_perform_sigma(ctx)
-
-    @client.command(name="?")
-    async def perform_umm(ctx) -> Coroutine:
-        return await bot.command_perform_umm(ctx)
-
-    @client.command(name="setlang")
-    async def perform_setlang(ctx, lang: str):
-        return await bot.command_perform_setlang(ctx, lang)
-
-    guild_id = BotConfig.app_command_guild_id()
-    if guild_id:
-        client.tree.add_command(create_slash_group(bot), guild=discord.Object(id=guild_id))
-    else:
-        client.tree.add_command(create_slash_group(bot))
+    client.tree.add_command(create_slash_group(bot))
 
     return bot

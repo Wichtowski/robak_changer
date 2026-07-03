@@ -1,5 +1,5 @@
-import re
 import sqlite3
+import unicodedata
 from dataclasses import dataclass
 from random import sample
 from threading import RLock
@@ -146,11 +146,11 @@ class NicknameStore:
             return row["lang"] if row else "en"
 
     def sanitize_for_language(self, lang: str, user_input: str) -> str:
-        match lang:
-            case "pl":
-                return re.sub(r"[^a-zA-Z\s\-_ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]", "", user_input).strip()
-            case "en" | _:
-                return re.sub(r"[^a-zA-Z\s\-_]", "", user_input).strip()
+        return "".join(
+            char
+            for char in user_input
+            if self._is_allowed_nickname_character(char)
+        ).strip()
 
     def close(self) -> None:
         with self._lock:
@@ -294,3 +294,8 @@ class NicknameStore:
         elif n2[-1] == "y":
             n2 = n2[:-1] + "a"
         return f"{n1} {n2}"
+
+    def _is_allowed_nickname_character(self, char: str) -> bool:
+        if char in {" ", "-", "_"}:
+            return True
+        return unicodedata.category(char)[0] in {"L", "M", "N"}

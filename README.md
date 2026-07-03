@@ -20,10 +20,13 @@ ZAO=discord_user_id
 Optional:
 
 ```bash
-DISCORD_APP_COMMAND_GUILD_ID=guild_id
 SYNC_APP_COMMANDS_ON_STARTUP=1
 LOG_LEVEL=INFO
 ```
+
+The bot allows up to 5 requests per second per Discord server.
+Requests above that limit are ignored until the one-second window clears.
+Log files are truncated automatically after 512MB.
 
 ## Run
 
@@ -33,8 +36,7 @@ python3 main.py
 
 ## Commands
 
-Prefix commands use `!robak`.
-Slash commands use `/robak`.
+Commands use `/robak`.
 
 Main commands:
 
@@ -45,6 +47,10 @@ Main commands:
 - `last`
 - `endorsed`
 - `setlang`
-- `zao`
+- `generate-zao`
 - `kiss`
 - `sigma`
+- `more`
+
+Language codes are set with `/robak setlang`.
+Common ISO language codes such as `en`, `pl`, `de`, `fr`, `es`, `ja`, `zh`, and `uk` are supported.

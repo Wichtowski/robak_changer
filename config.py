@@ -12,10 +12,11 @@ if load_dotenv:
 
 class BotConfig:
     # Bot settings
-    PREFIX: Final[str] = "!robak "
     MAX_MESSAGE_LENGTH: Final[int] = 1500
-    COMMAND_COOLDOWN: Final[int] = 3
     MAX_NICKNAME_LENGTH: Final[int] = 32
+    GUILD_RATE_LIMIT_REQUESTS: Final[int] = 5
+    GUILD_RATE_LIMIT_WINDOW_SECONDS: Final[float] = 1.0
+    LOG_FILE_MAX_BYTES: Final[int] = 512 * 1024 * 1024
     
     # File paths
     BASE_DIR: Final[Path] = Path(__file__).parent
@@ -24,8 +25,6 @@ class BotConfig:
     
     # Command settings
     REACTION_TIMEOUT: Final[float] = 20.0
-    POLL_TIMEOUT: Final[float] = 3.0
-    POLL_THRESHOLD: Final[int] = 2
 
     @classmethod
     def token(cls) -> str:
@@ -44,16 +43,6 @@ class BotConfig:
     @classmethod
     def log_level(cls) -> str:
         return os.getenv("LOG_LEVEL", "INFO").upper()
-
-    @classmethod
-    def app_command_guild_id(cls) -> int | None:
-        raw_value = os.getenv("DISCORD_APP_COMMAND_GUILD_ID", "")
-        if not raw_value:
-            return None
-        try:
-            return int(raw_value)
-        except ValueError as exc:
-            raise ValueError("DISCORD_APP_COMMAND_GUILD_ID must be a Discord guild ID") from exc
 
     @classmethod
     def sync_app_commands_on_startup(cls) -> bool:
