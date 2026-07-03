@@ -1,5 +1,3 @@
-blacklist = open('blacklist.csv', 'r').read().split('\n')
-    
 kiss = [
     "{zao} says that :flag_pt: ronaldo :fire: > :flag_ar: messi :x: and {user} agrees :+1:",
     "{user} gives {zao} a soft kiss :kiss:",

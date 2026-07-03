@@ -1,16 +1,10 @@
-import os
 import asyncio
-from dotenv import load_dotenv
-from bot import DiscordBot
+from commands import setup_bot
+from config import BotConfig
 
 def main():
-    load_dotenv()
-    token = os.getenv('DISCORD_TOKEN')
-    
-    if not token:
-        raise ValueError("Discord token not found in environment variables")
-        
-    bot = DiscordBot(token)
+    BotConfig.validate()
+    bot = setup_bot()
     
     try:
         asyncio.run(bot.start_bot())
