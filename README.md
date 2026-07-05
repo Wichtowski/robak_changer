@@ -34,6 +34,29 @@ Log files are truncated automatically after 512MB.
 python3 main.py
 ```
 
+## Deploy
+
+The GitHub Actions workflow in `.github/workflows/main.yml` deploys the selected ref to the VPS.
+Pushes to `main` deploy automatically.
+Manual runs can deploy a specific branch, tag, or commit SHA with the `ref` input.
+
+Required GitHub secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+
+Optional GitHub variables:
+
+- `VPS_DEPLOY_PATH`, defaults to `/opt/robak_changer`
+- `VPS_SERVICE_NAME`, defaults to `robak_changer`
+- `VPS_SSH_PORT`, defaults to `22`
+
+The VPS must have the runtime `.env` at `/opt/robak_changer/shared/.env` unless `VPS_DEPLOY_PATH` changes that base path.
+The workflow preserves `/opt/robak_changer/shared/data.sqlite3` and `/opt/robak_changer/shared/logs`.
+Deployment fails if `data.sqlite3` is larger than 1.5GB.
+Log files over 512MB are truncated before and after restart, and logrotate is configured with the same limit.
+
 ## Commands
 
 Commands use `/robak`.

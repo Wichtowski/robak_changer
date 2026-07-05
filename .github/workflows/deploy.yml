@@ -1,0 +1,96 @@
+name: Deploy Bot to VPS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-bot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_ARCHIVE: bot-release.tar.gz
+      RELEASE_VERSION: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Package repository
+        run: |
+          rm -f "${{ env.DEPLOY_ARCHIVE }}" "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}"
+
+          tar \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=.venv \
+            --exclude=node_modules \
+            --exclude=dist \
+            --exclude=.env \
+            --exclude=.env.* \
+            -czf "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" .
+
+          cp "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" "${{ env.DEPLOY_ARCHIVE }}"
+
+      - name: Build production env file
+        run: |
+          if [ -n "${{ secrets.ENV_PRODUCTION }}" ]; then
+            cat > .env.production <<'EOF'
+            ${{ secrets.ENV_PRODUCTION }}
+            EOF
+          else
+            echo "# no ENV_PRODUCTION secret provided" > .env.production
+          fi
+
+      - name: Copy release files to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          source: "${{ env.DEPLOY_ARCHIVE }},.env.production"
+          target: /tmp
+
+      - name: Deploy stack on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          script_stop: true
+          envs: DEPLOY_PATH,DEPLOY_ARCHIVE
+          command_timeout: "5m"
+          script: |
+            set -euo pipefail
+
+            mkdir -p "${DEPLOY_PATH}"
+            cd "${DEPLOY_PATH}"
+
+            # Stop existing compose if present
+            if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
+              docker compose --env-file .env -f docker-compose.prod.yml down || true
+            fi
+
+            # Clean up the codebase except .env and infra/
+            find . -mindepth 1 -maxdepth 1 ! -name '.env' ! -name 'infra' -exec rm -rf {} +
+
+            mv /tmp/.env.production "${DEPLOY_PATH}/.env"
+            chmod 600 "${DEPLOY_PATH}/.env"
+
+            tar -xzf "/tmp/${DEPLOY_ARCHIVE}" --no-overwrite-dir -C "${DEPLOY_PATH}"
+            rm -f "/tmp/${DEPLOY_ARCHIVE}"
+
+            docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+            docker compose --env-file .env -f docker-compose.prod.yml ps
