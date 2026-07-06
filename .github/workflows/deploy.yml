@@ -16,7 +16,7 @@ jobs:
 
     env:
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      DEPLOY_ARCHIVE: bot-release.tar.gz
+      DEPLOY_ARCHIVE: ${{ vars.DEPLOY_ARCHIVE }}
       RELEASE_VERSION: ${{ github.ref_name }}
 
     steps:
