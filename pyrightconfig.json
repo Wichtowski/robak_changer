@@ -1,0 +1,11 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "extraPaths": [
+    "src"
+  ],
+  "typeCheckingMode": "strict",
+  // Disable unused-symbol diagnostics you don't want to see
+  "reportUnusedFunction": false,
+}

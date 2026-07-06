@@ -10,6 +10,7 @@ except ModuleNotFoundError:
 if load_dotenv:
     load_dotenv()
 
+
 class BotConfig:
     # Bot settings
     MAX_MESSAGE_LENGTH: Final[int] = 1500
@@ -17,12 +18,12 @@ class BotConfig:
     GUILD_RATE_LIMIT_REQUESTS: Final[int] = 5
     GUILD_RATE_LIMIT_WINDOW_SECONDS: Final[float] = 1.0
     LOG_FILE_MAX_BYTES: Final[int] = 512 * 1024 * 1024
-    
+
     # File paths
     BASE_DIR: Final[Path] = Path(__file__).parent
     BLACKLIST_FILE: Final[Path] = BASE_DIR / "blacklist.csv"
     DB_FILE: Final[Path] = BASE_DIR / "data.sqlite3"
-    
+
     # Command settings
     REACTION_TIMEOUT: Final[float] = 20.0
 
@@ -58,7 +59,7 @@ class BotConfig:
             for line in cls.BLACKLIST_FILE.read_text(encoding="utf-8").splitlines()
             if line.strip()
         }
-    
+
     @classmethod
     def validate(cls) -> None:
         """Validate required configuration"""
@@ -66,3 +67,13 @@ class BotConfig:
             raise ValueError("Discord token not found in environment variables")
         if not cls.zao_id():
             raise ValueError("ZAO ID not found in environment variables")
+
+    @classmethod
+    def dev_guild_id(cls) -> int | None:
+        raw = os.getenv("DEV_GUILD", "").strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            return None

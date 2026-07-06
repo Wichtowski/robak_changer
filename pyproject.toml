@@ -4,22 +4,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robak-changer"
-version = "0.1.0"
+version = "2.0"
 description = "Discord bot for generating and managing nicknames"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+authors = [
+  { name = "wichtowski", email = "oskar.wichtowski3@gmail.com" }
+]
 
 dependencies = [
   "discord.py>=2.0.0",
-  "python-dotenv>=0.21.0"
+  "dotenv>=0.9.9",
+  "python-dotenv>=0.21.0",
 ]
 
 [project.urls]
 "Homepage" = "https://example.com/robak_changer"
 
 [project.scripts]
-robak-changer = "main:main"
+robak-changer = "robak.main:main"
+
 
 [tool.setuptools]
-py-modules = ["bot", "main", "config", "logger", "commands", "utils", "essentials"]
+package-dir = {"" = "src"}
+packages = ["robak"]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.11.0"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["__pycache__", ".venv", "build", "dist", ".git"]
+[tool.ruff.lint]
+extend-ignore = ["E203"]

@@ -5,7 +5,7 @@ from random import sample
 from threading import RLock
 from typing import Final
 
-from config import BotConfig
+from robak.config import BotConfig
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,7 @@ class NicknameStore:
         self._connection.row_factory = sqlite3.Row
         self._configure_connection()
         self._create_schema()
-        self._migrate_legacy_files()
+        # legacy migrations removed for fresh deployment
 
     def generate_nickname(self, guild_id: int, who: str = "") -> NicknameGeneration:
         with self._lock:
@@ -42,7 +42,9 @@ class NicknameStore:
             guild_nicks = [row["nick"] for row in rows]
 
             if len(guild_nicks) < 2:
-                return NicknameGeneration(error="Not enough nicknames to generate a new one")
+                return NicknameGeneration(
+                    error="Not enough nicknames to generate a new one"
+                )
 
             n1, n2 = sample(guild_nicks, 2)
             fixed_nick = self._format_for_language(guild_id, n1, n2)
@@ -105,7 +107,9 @@ class NicknameStore:
                 """,
                 (guild_id,),
             ).fetchall()
-            return ", ".join(row["nick"] for row in rows) or "No generated nicknames yet"
+            return (
+                ", ".join(row["nick"] for row in rows) or "No generated nicknames yet"
+            )
 
     def list_endorsed_nicknames(self, guild_id: int) -> str:
         with self._lock:
@@ -122,6 +126,52 @@ class NicknameStore:
             if not rows:
                 return "No endorsed nicknames yet"
             return "\n".join(f"{row['nick']} - {row['votes']}" for row in rows)
+
+    # Blacklist management
+    def add_blacklist_term(self, term: str) -> str:
+        term = term.strip().lower()
+        if not term:
+            return "Cannot add empty blacklist term"
+        with self._lock:
+            cursor = self._connection.execute(
+                "INSERT OR IGNORE INTO blacklist (term) VALUES (?)",
+                (term,),
+            )
+            self._connection.commit()
+            if cursor.rowcount == 0:
+                return f"{term} is already blacklisted"
+            return f"Successfully blacklisted {term}"
+
+    def remove_blacklist_term(self, term: str) -> str:
+        term = term.strip().lower()
+        if not term:
+            return "Cannot remove empty blacklist term"
+        with self._lock:
+            cursor = self._connection.execute(
+                "DELETE FROM blacklist WHERE term = ?",
+                (term,),
+            )
+            self._connection.commit()
+            if cursor.rowcount == 0:
+                return f"{term} was not found in blacklist"
+            return f"Successfully removed {term} from blacklist"
+
+    def list_blacklist_terms(self) -> set[str]:
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT term FROM blacklist ORDER BY term"
+            ).fetchall()
+            return {row["term"] for row in rows}
+
+    def is_blacklisted(self, term: str) -> bool:
+        term = term.strip().lower()
+        if not term:
+            return False
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT 1 FROM blacklist WHERE term = ?", (term,)
+            ).fetchone()
+            return row is not None
 
     def set_language(self, guild_id: int, lang: str) -> str:
         with self._lock:
@@ -147,9 +197,7 @@ class NicknameStore:
 
     def sanitize_for_language(self, lang: str, user_input: str) -> str:
         return "".join(
-            char
-            for char in user_input
-            if self._is_allowed_nickname_character(char)
+            char for char in user_input if self._is_allowed_nickname_character(char)
         ).strip()
 
     def close(self) -> None:
@@ -197,80 +245,12 @@ class NicknameStore:
                 term TEXT PRIMARY KEY
             );
 
-            CREATE TABLE IF NOT EXISTS legacy_migrations (
-                guild_id INTEGER PRIMARY KEY,
-                migrated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
+            -- legacy migrations table removed for fresh deployments
             """
         )
         self._connection.commit()
 
-    def _migrate_legacy_files(self) -> None:
-        for guild_dir in BotConfig.BASE_DIR.iterdir():
-            if not guild_dir.is_dir() or not guild_dir.name.isdigit():
-                continue
-
-            guild_id = int(guild_dir.name)
-            if self._legacy_migration_done(guild_id):
-                continue
-
-            self._ensure_guild(guild_id)
-            self._migrate_lang(guild_id, guild_dir / "lang.csv")
-            self._migrate_nicknames(guild_id, guild_dir / "nicknames.csv")
-            self._migrate_generated(guild_id, guild_dir / "generated.csv", is_zao=False)
-            self._migrate_generated(guild_id, guild_dir / "zao_generated.csv", is_zao=True)
-            self._connection.execute(
-                "INSERT OR IGNORE INTO legacy_migrations (guild_id) VALUES (?)",
-                (guild_id,),
-            )
-        self._connection.commit()
-
-    def _legacy_migration_done(self, guild_id: int) -> bool:
-        row = self._connection.execute(
-            "SELECT 1 FROM legacy_migrations WHERE guild_id = ?",
-            (guild_id,),
-        ).fetchone()
-        return row is not None
-
-    def _migrate_lang(self, guild_id: int, path) -> None:
-        if not path.exists():
-            return
-
-        lang = self._read_legacy_lines(path)
-        if not lang:
-            return
-
-        self._connection.execute(
-            """
-            INSERT INTO guilds (guild_id, lang)
-            VALUES (?, ?)
-            ON CONFLICT(guild_id) DO UPDATE SET lang = excluded.lang
-            """,
-            (guild_id, lang[0]),
-        )
-
-    def _migrate_nicknames(self, guild_id: int, path) -> None:
-        for nick in self._read_legacy_lines(path):
-            self._connection.execute(
-                "INSERT OR IGNORE INTO nicknames (guild_id, nick) VALUES (?, ?)",
-                (guild_id, nick),
-            )
-
-    def _migrate_generated(self, guild_id: int, path, is_zao: bool) -> None:
-        for nick in self._read_legacy_lines(path):
-            self._connection.execute(
-                "INSERT INTO generated (guild_id, nick, is_zao) VALUES (?, ?, ?)",
-                (guild_id, nick, int(is_zao)),
-            )
-
-    def _read_legacy_lines(self, path) -> list[str]:
-        if not path.exists():
-            return []
-        return [
-            line.strip()
-            for line in path.read_text(encoding=self.ENCODING).splitlines()
-            if line.strip()
-        ]
+    # legacy migration helpers removed since this deployment starts fresh
 
     def _ensure_guild(self, guild_id: int) -> None:
         self._connection.execute(

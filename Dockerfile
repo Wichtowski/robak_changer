@@ -15,4 +15,4 @@ RUN apt-get update \
 ENV PYTHONUNBUFFERED=1
 
 # Default command — adjust to your actual entrypoint if needed
-CMD ["python", "main.py"]
+CMD ["python", "src/robak/main.py"]

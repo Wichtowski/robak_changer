@@ -69,11 +69,7 @@ Main commands:
 - `all`
 - `last`
 - `endorsed`
-- `setlang`
 - `generate-zao`
 - `kiss`
-- `sigma`
+- `balls`
 - `more`
-
-Language codes are set with `/robak setlang`.
-Common ISO language codes such as `en`, `pl`, `de`, `fr`, `es`, `ja`, `zh`, and `uk` are supported.
