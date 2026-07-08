@@ -2,7 +2,11 @@ import discord
 from discord import app_commands
 from robak.bot import DiscordBot
 from robak.config import BotConfig
-from robak.commands.helpers import guarded_guild_id, send_interaction_message
+from robak.commands.helpers import (
+    BlacklistConflictView,
+    guarded_guild_id,
+    send_interaction_message,
+)
 
 
 def register_blacklist_commands(robak: app_commands.Group, bot: DiscordBot):
@@ -22,6 +26,25 @@ def register_blacklist_commands(robak: app_commands.Group, bot: DiscordBot):
     async def slash_blacklist_add(interaction: discord.Interaction, term: str):
         guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
+            return
+
+        normalized_term = term.strip().lower()
+        matching_nicknames = bot.NICKNAME_STORE.list_matching_nicknames(
+            guild_id, normalized_term
+        )
+        if matching_nicknames:
+            view = BlacklistConflictView(
+                bot,
+                interaction.user.id,
+                guild_id,
+                normalized_term,
+                matching_nicknames,
+            )
+            joined_matches = ", ".join(f"`{nick}`" for nick in matching_nicknames)
+            await interaction.response.send_message(
+                f"> `{normalized_term}` is also in the word list\n> Found: {joined_matches}",
+                view=view,
+            )
             return
 
         result = bot.NICKNAME_STORE.add_blacklist_term(guild_id, term)

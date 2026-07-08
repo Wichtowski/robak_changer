@@ -1,66 +1,56 @@
-# robak_changer
+![robal](https://raw.githubusercontent.com/Wichtowski/robak_changer/refs/heads/main/ta.jpg)
 
 Discord nickname bot for generating and managing server nicknames.
-![robal](https://raw.githubusercontent.com/Wichtowski/robak_changer/refs/heads/main/ta.jpg)
 
 ## Setup
 
-Install runtime dependencies:
+Install runtime and development dependencies with `uv`.
 
 ```bash
-python3 -m pip install discord.py python-dotenv
+uv sync --extra dev
 ```
 
-Create environment variables:
+Create a local `.env` file or export the required environment variables.
 
 ```bash
 DISCORD_TOKEN=your_bot_token
 ZAO=discord_user_id
 ```
 
-Optional:
+Optional configuration:
 
 ```bash
 SYNC_APP_COMMANDS_ON_STARTUP=1
 LOG_LEVEL=INFO
+DEV_GUILD=discord_guild_id
+DATA_DIR=./data
 ```
 
-The bot allows up to 5 requests per second per Discord server.
-Requests above that limit are ignored until the one-second window clears.
-Log files are truncated automatically after 512MB.
+`DISCORD_TOKEN` and `ZAO` are required.
+
+`ZAO` must be the Discord user ID of the target user.
+
+The bot keeps a small per-guild request throttle of 5 requests per second.
+
+Log files rotate automatically after 512 MB.
 
 ## Run
 
 ```bash
-python3 main.py
+make dev
 ```
 
-## Deploy
+You can also run the entrypoint directly with:
 
-The GitHub Actions workflow in `.github/workflows/deploy.yml` deploys the bot to the VPS.
-It runs manually via the `workflow_dispatch` trigger.
-
-Required GitHub secrets:
-
-- `DEPLOY_HOST`: VPS host IP or hostname.
-- `DEPLOY_USER`: SSH username.
-- `DEPLOY_SSH_KEY`: Private SSH key.
-- `DEPLOY_SSH_PASSPHRASE`: Optional password for the private SSH key.
-- `DEPLOY_PATH`: Target directory on the VPS (e.g. `/opt/robak_changer`).
-- `ENV_PRODUCTION`: The contents of the production `.env` file (e.g., `DISCORD_TOKEN`, `ZAO`, etc.).
-
-Required GitHub variables:
-
-- `DEPLOY_ARCHIVE`: The filename for the tarball archive (e.g. `release.tar.gz`).
-
-The workflow copies the codebase and the generated `.env.production` file to the VPS, extracts the files, and uses docker-compose to build and start the containerized service.
-The database and logs are stored inside the `bot_data` Docker volume dynamically, ensuring they are preserved across deployments.
+```bash
+uv run robak-changer
+```
 
 ## Commands
 
-Commands use `/robak`.
+All slash commands live under `/robak`.
 
-Main commands:
+Available commands:
 
 - `generate`
 - `add`
@@ -69,6 +59,34 @@ Main commands:
 - `last`
 - `endorsed`
 - `generate-zao`
+- `more`
 - `kiss`
 - `balls`
-- `more`
+- `blacklist add`
+- `blacklist remove`
+- `blacklist list`
+
+`add`, `remove`, and the blacklist management commands are intended for guild moderators.
+
+## Deploy
+
+The GitHub Actions workflow in `.github/workflows/deploy.yml` deploys the bot to a VPS.
+
+It runs manually via `workflow_dispatch`.
+
+Required GitHub secrets:
+
+- `DEPLOY_HOST` - VPS host IP or hostname
+- `DEPLOY_USER` - SSH username
+- `DEPLOY_SSH_KEY` - private SSH key
+- `DEPLOY_SSH_PASSPHRASE` - optional passphrase for the private SSH key
+- `DEPLOY_PATH` - target directory on the VPS, for example `/opt/robak_changer`
+- `ENV_PRODUCTION` - contents of the production `.env` file, including `DISCORD_TOKEN` and `ZAO`
+
+Required GitHub variables:
+
+- `DEPLOY_ARCHIVE` - tarball filename, for example `release.tar.gz`
+
+The workflow copies the codebase and generated production env file to the VPS, extracts the archive, and starts the container with `docker compose`.
+
+The SQLite database and logs live in the `bot_data` volume, so they persist across deployments.

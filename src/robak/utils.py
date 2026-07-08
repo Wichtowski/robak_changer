@@ -143,6 +143,46 @@ class NicknameStore:
                 return f"{term} is already blacklisted"
             return f"Successfully blacklisted {term}"
 
+    def list_matching_nicknames(self, guild_id: int, term: str) -> list[str]:
+        term = term.strip().lower()
+        if not term:
+            return []
+        self._ensure_guild(guild_id)
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT nick FROM nicknames WHERE guild_id = ? ORDER BY nick",
+                (guild_id,),
+            ).fetchall()
+            return [
+                row["nick"]
+                for row in rows
+                if row["nick"].strip().lower() == term
+            ]
+
+    def move_nickname_to_blacklist(self, guild_id: int, term: str) -> tuple[int, str]:
+        term = term.strip().lower()
+        if not term:
+            return 0, "Cannot move empty blacklist term"
+        self._ensure_guild(guild_id)
+        with self._lock:
+            removed_cursor = self._connection.execute(
+                "DELETE FROM nicknames WHERE guild_id = ? AND lower(nick) = ?",
+                (guild_id, term),
+            )
+            blacklist_cursor = self._connection.execute(
+                "INSERT OR IGNORE INTO blacklist (guild_id, term) VALUES (?, ?)",
+                (guild_id, term),
+            )
+            self._connection.commit()
+            removed_count = removed_cursor.rowcount
+            if blacklist_cursor.rowcount == 0:
+                if removed_count == 0:
+                    return 0, f"{term} is already blacklisted"
+                return removed_count, f"Moved {term} to blacklist"
+            if removed_count == 0:
+                return 0, f"Successfully blacklisted {term}"
+            return removed_count, f"Moved {term} to blacklist"
+
     def remove_blacklist_term(self, guild_id: int, term: str) -> str:
         term = term.strip().lower()
         if not term:

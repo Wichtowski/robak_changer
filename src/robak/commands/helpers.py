@@ -68,6 +68,67 @@ class GenerateNicknameView(discord.ui.View):
         )
 
 
+class BlacklistConflictView(discord.ui.View):
+    def __init__(
+        self,
+        bot: DiscordBot,
+        author_id: int,
+        guild_id: int,
+        term: str,
+        matching_nicknames: list[str],
+    ):
+        super().__init__(timeout=BotConfig.REACTION_TIMEOUT)
+        self.bot = bot
+        self.author_id = author_id
+        self.guild_id = guild_id
+        self.term = term
+        self.matching_nicknames = matching_nicknames
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.guild_id is not None and not self.bot.can_respond_to_guild(
+            interaction.guild_id
+        ):
+            return False
+        if interaction.user.id == self.author_id:
+            return True
+        await interaction.response.send_message(
+            "> This choice is not yours to make", ephemeral=True
+        )
+        return False
+
+    @discord.ui.button(label="Keep it", style=discord.ButtonStyle.secondary)
+    async def keep_it(
+        self, interaction: discord.Interaction, _button: discord.ui.Button[Any]
+    ):
+        result = self.bot.NICKNAME_STORE.add_blacklist_term(self.guild_id, self.term)
+        await interaction.response.edit_message(
+            content=self._format_keep_result(result), view=None
+        )
+
+    @discord.ui.button(label="Move to blacklist", style=discord.ButtonStyle.danger)
+    async def move_to_blacklist(
+        self, interaction: discord.Interaction, _button: discord.ui.Button[Any]
+    ):
+        _removed_count, result = self.bot.NICKNAME_STORE.move_nickname_to_blacklist(
+            self.guild_id, self.term
+        )
+        await interaction.response.edit_message(
+            content=self._format_move_result(result), view=None
+        )
+
+    def _format_keep_result(self, result: str) -> str:
+        matching = ", ".join(f"`{nick}`" for nick in self.matching_nicknames)
+        if matching:
+            return f"> {result}\n> Kept in word list: {matching}"
+        return f"> {result}"
+
+    def _format_move_result(self, result: str) -> str:
+        matching = ", ".join(f"`{nick}`" for nick in self.matching_nicknames)
+        if matching:
+            return f"> {result}\n> Removed from word list: {matching}"
+        return f"> {result}"
+
+
 class PaginatedListView(discord.ui.View):
     def __init__(self, chunks: list[str], timeout: float = BotConfig.REACTION_TIMEOUT):
         super().__init__(timeout=timeout)
