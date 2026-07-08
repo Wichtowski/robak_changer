@@ -42,6 +42,7 @@ def register_nickname_commands(robak: app_commands.Group, bot: DiscordBot):
 
     @robak.command(name="remove", description=app_commands.locale_str("command.remove.description"))
     @app_commands.describe(nickname=app_commands.locale_str("option.nickname.description"))
+    @app_commands.default_permissions(manage_guild=True)
     async def slash_remove(interaction: discord.Interaction, nickname: str):
         guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:

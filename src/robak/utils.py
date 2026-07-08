@@ -128,48 +128,53 @@ class NicknameStore:
             return "\n".join(f"{row['nick']} - {row['votes']}" for row in rows)
 
     # Blacklist management
-    def add_blacklist_term(self, term: str) -> str:
+    def add_blacklist_term(self, guild_id: int, term: str) -> str:
         term = term.strip().lower()
         if not term:
             return "Cannot add empty blacklist term"
+        self._ensure_guild(guild_id)
         with self._lock:
             cursor = self._connection.execute(
-                "INSERT OR IGNORE INTO blacklist (term) VALUES (?)",
-                (term,),
+                "INSERT OR IGNORE INTO blacklist (guild_id, term) VALUES (?, ?)",
+                (guild_id, term),
             )
             self._connection.commit()
             if cursor.rowcount == 0:
                 return f"{term} is already blacklisted"
             return f"Successfully blacklisted {term}"
 
-    def remove_blacklist_term(self, term: str) -> str:
+    def remove_blacklist_term(self, guild_id: int, term: str) -> str:
         term = term.strip().lower()
         if not term:
             return "Cannot remove empty blacklist term"
+        self._ensure_guild(guild_id)
         with self._lock:
             cursor = self._connection.execute(
-                "DELETE FROM blacklist WHERE term = ?",
-                (term,),
+                "DELETE FROM blacklist WHERE guild_id = ? AND term = ?",
+                (guild_id, term),
             )
             self._connection.commit()
             if cursor.rowcount == 0:
                 return f"{term} was not found in blacklist"
             return f"Successfully removed {term} from blacklist"
 
-    def list_blacklist_terms(self) -> set[str]:
+    def list_blacklist_terms(self, guild_id: int) -> set[str]:
+        self._ensure_guild(guild_id)
         with self._lock:
             rows = self._connection.execute(
-                "SELECT term FROM blacklist ORDER BY term"
+                "SELECT term FROM blacklist WHERE guild_id = ? ORDER BY term",
+                (guild_id,),
             ).fetchall()
             return {row["term"] for row in rows}
 
-    def is_blacklisted(self, term: str) -> bool:
+    def is_blacklisted(self, guild_id: int, term: str) -> bool:
         term = term.strip().lower()
         if not term:
             return False
         with self._lock:
             row = self._connection.execute(
-                "SELECT 1 FROM blacklist WHERE term = ?", (term,)
+                "SELECT 1 FROM blacklist WHERE guild_id = ? AND term = ?",
+                (guild_id, term),
             ).fetchone()
             return row is not None
 
@@ -242,7 +247,9 @@ class NicknameStore:
             );
 
             CREATE TABLE IF NOT EXISTS blacklist (
-                term TEXT PRIMARY KEY
+                guild_id INTEGER NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE,
+                term TEXT NOT NULL,
+                PRIMARY KEY (guild_id, term)
             );
 
             -- legacy migrations table removed for fresh deployments

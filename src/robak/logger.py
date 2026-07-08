@@ -21,8 +21,8 @@ class CustomLogger:
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
-        log_file = BotConfig.BASE_DIR / "logs" / f"{name}.log"
-        log_file.parent.mkdir(exist_ok=True)
+        log_file = BotConfig.DATA_DIR / "logs" / f"{name}.log"
+        log_file.parent.mkdir(exist_ok=True, parents=True)
 
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)

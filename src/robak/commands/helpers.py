@@ -95,7 +95,8 @@ class PaginatedListView(discord.ui.View):
 
     @discord.ui.button(label="Close", style=discord.ButtonStyle.danger)
     async def close(self, interaction: discord.Interaction, _button: discord.ui.Button[Any]):
-        await interaction.response.edit_message(content=interaction.message.content, view=None)
+        content = interaction.message.content if interaction.message else ""
+        await interaction.response.edit_message(content=content, view=None)
 
 
 async def send_interaction_message(

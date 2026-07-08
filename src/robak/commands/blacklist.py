@@ -18,14 +18,13 @@ def register_blacklist_commands(robak: app_commands.Group, bot: DiscordBot):
         description=app_commands.locale_str("command.blacklist.add.description"),
     )
     @app_commands.describe(term=app_commands.locale_str("option.term.description"))
+    @app_commands.default_permissions(manage_guild=True)
     async def slash_blacklist_add(interaction: discord.Interaction, term: str):
         guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
             return
 
-        result = bot.NICKNAME_STORE.add_blacklist_term(term)
-        # Refresh in-memory set
-        bot.BLACKLIST = bot.NICKNAME_STORE.list_blacklist_terms()
+        result = bot.NICKNAME_STORE.add_blacklist_term(guild_id, term)
         await send_interaction_message(interaction, f"> {result}")
 
     @blacklist.command(
@@ -33,13 +32,13 @@ def register_blacklist_commands(robak: app_commands.Group, bot: DiscordBot):
         description=app_commands.locale_str("command.blacklist.remove.description"),
     )
     @app_commands.describe(term=app_commands.locale_str("option.term.description"))
+    @app_commands.default_permissions(manage_guild=True)
     async def slash_blacklist_remove(interaction: discord.Interaction, term: str):
         guild_id = await guarded_guild_id(interaction, bot)
         if guild_id is None:
             return
 
-        result = bot.NICKNAME_STORE.remove_blacklist_term(term)
-        bot.BLACKLIST = bot.NICKNAME_STORE.list_blacklist_terms()
+        result = bot.NICKNAME_STORE.remove_blacklist_term(guild_id, term)
         await send_interaction_message(interaction, f"> {result}")
 
     @blacklist.command(
@@ -51,7 +50,7 @@ def register_blacklist_commands(robak: app_commands.Group, bot: DiscordBot):
         if guild_id is None:
             return
 
-        terms = sorted(bot.NICKNAME_STORE.list_blacklist_terms())
+        terms = sorted(bot.NICKNAME_STORE.list_blacklist_terms(guild_id))
         if not terms:
             await send_interaction_message(interaction, "> No blacklisted terms")
             return

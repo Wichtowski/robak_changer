@@ -36,26 +36,24 @@ python3 main.py
 
 ## Deploy
 
-The GitHub Actions workflow in `.github/workflows/main.yml` deploys the selected ref to the VPS.
-Pushes to `main` deploy automatically.
-Manual runs can deploy a specific branch, tag, or commit SHA with the `ref` input.
+The GitHub Actions workflow in `.github/workflows/deploy.yml` deploys the bot to the VPS.
+It runs manually via the `workflow_dispatch` trigger.
 
 Required GitHub secrets:
 
-- `VPS_HOST`
-- `VPS_USER`
-- `VPS_SSH_KEY`
+- `DEPLOY_HOST`: VPS host IP or hostname.
+- `DEPLOY_USER`: SSH username.
+- `DEPLOY_SSH_KEY`: Private SSH key.
+- `DEPLOY_SSH_PASSPHRASE`: Optional password for the private SSH key.
+- `DEPLOY_PATH`: Target directory on the VPS (e.g. `/opt/robak_changer`).
+- `ENV_PRODUCTION`: The contents of the production `.env` file (e.g., `DISCORD_TOKEN`, `ZAO`, etc.).
 
-Optional GitHub variables:
+Required GitHub variables:
 
-- `VPS_DEPLOY_PATH`, defaults to `/opt/robak_changer`
-- `VPS_SERVICE_NAME`, defaults to `robak_changer`
-- `VPS_SSH_PORT`, defaults to `22`
+- `DEPLOY_ARCHIVE`: The filename for the tarball archive (e.g. `release.tar.gz`).
 
-The VPS must have the runtime `.env` at `/opt/robak_changer/shared/.env` unless `VPS_DEPLOY_PATH` changes that base path.
-The workflow preserves `/opt/robak_changer/shared/data.sqlite3` and `/opt/robak_changer/shared/logs`.
-Deployment fails if `data.sqlite3` is larger than 1.5GB.
-Log files over 512MB are truncated before and after restart, and logrotate is configured with the same limit.
+The workflow copies the codebase and the generated `.env.production` file to the VPS, extracts the files, and uses docker-compose to build and start the containerized service.
+The database and logs are stored inside the `bot_data` Docker volume dynamically, ensuring they are preserved across deployments.
 
 ## Commands
 

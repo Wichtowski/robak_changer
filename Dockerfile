@@ -1,18 +1,17 @@
-FROM python:3.11-slim
+FROM python:3.12-slim AS app
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /bin/
+
+ENV PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /app
 
-# Copy project
-COPY . .
+COPY pyproject.toml uv.lock ./
+COPY src ./src
 
-# Install deps if requirements.txt exists
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libffi-dev build-essential \
-    && rm -rf /var/lib/apt/lists/* \
-    && python -m pip install --upgrade pip setuptools wheel \
-    && bash -c 'if [ -f requirements.txt ]; then pip install -r requirements.txt; fi'
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable
 
-ENV PYTHONUNBUFFERED=1
-
-# Default command — adjust to your actual entrypoint if needed
-CMD ["python", "src/robak/main.py"]
+CMD ["/app/.venv/bin/robak-changer"]

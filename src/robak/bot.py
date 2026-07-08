@@ -17,7 +17,6 @@ class DiscordBot:
         self.INTENTS: Intents = Intents.default()
         self.INTENTS.guilds = True
         self.INTENTS.members = True
-        self.INTENTS.message_content = True
         self.INTENTS.messages = True
         self.CLIENT: commands.Bot = commands.Bot(
             command_prefix=commands.when_mentioned, intents=self.INTENTS
@@ -28,8 +27,6 @@ class DiscordBot:
         self.GLOBAL_LOGGER: CustomLogger = CustomLogger("global_logger")
         self.LOGGER: CustomLogger = CustomLogger("app")
         self.ERR_LOG: CustomLogger = CustomLogger("error")
-        # Load blacklist from the database
-        self.BLACKLIST: set[str] = self.NICKNAME_STORE.list_blacklist_terms()
 
         self._shutdown_flag: asyncio.Event = asyncio.Event()
         self._app_commands_synced: bool = False
@@ -57,7 +54,6 @@ class DiscordBot:
                 return self.NICKNAME_STORE.add_nickname(guild_id, user_input_lower)
             case "remove":
                 return self.NICKNAME_STORE.remove_nickname(guild_id, user_input_lower)
-            # `setlang` command removed: language setting is no longer supported
             case "all":
                 return self.NICKNAME_STORE.list_nicknames(guild_id)
             case "last":
@@ -147,7 +143,7 @@ class DiscordBot:
             return "Invalid language code"
         if not normalized_input:
             return "Missing required input"
-        if normalized_input.lower() in self.BLACKLIST:
+        if self.NICKNAME_STORE.is_blacklisted(guild_id, normalized_input):
             return "This value is blacklisted"
 
         return self.get_response(action, guild_id, normalized_input)
@@ -155,6 +151,8 @@ class DiscordBot:
     def generate_nickname(self, guild_id: int, who: str = "") -> NicknameGeneration:
         return self.NICKNAME_STORE.generate_nickname(guild_id, who=who)
 
+    # Local application-level abuse protection / spam prevention throttle.
+    # Official Discord REST API rate limits are handled dynamically by discord.py.
     def can_respond_to_guild(self, guild_id: int) -> bool:
         now = time.monotonic()
         request_times = self._guild_request_times[guild_id]

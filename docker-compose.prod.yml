@@ -6,8 +6,11 @@ services:
     container_name: robak_changer_bot
     restart: unless-stopped
     env_file: .env
+    environment:
+      - DATA_DIR=/data
     volumes:
       - .:/app:ro
+      - bot_data:/data
     # If your bot exposes an HTTP port (e.g. webhook), uncomment and set the port
     # ports:
     #   - "8000:8000"
@@ -26,5 +29,6 @@ services:
   #     - caddy_config:/config
 
 volumes:
+  bot_data:
   caddy_data:
   caddy_config:

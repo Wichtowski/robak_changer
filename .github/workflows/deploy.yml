@@ -34,10 +34,19 @@ jobs:
             --exclude=.git \
             --exclude=.github \
             --exclude=.venv \
+            --exclude=.ruff_cache \
+            --exclude=.egg-info \
+            --exclude=*.egg-info \
             --exclude=node_modules \
             --exclude=dist \
             --exclude=.env \
             --exclude=.env.* \
+            --exclude=*.sqlite3 \
+            --exclude=*.sqlite3-journal \
+            --exclude=*.log \
+            --exclude=logs \
+            --exclude=__pycache__ \
+            --exclude=project-audit-context.tar.gz \
             -czf "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" .
 
           cp "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" "${{ env.DEPLOY_ARCHIVE }}"

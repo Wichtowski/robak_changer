@@ -15,14 +15,17 @@ class BotConfig:
     # Bot settings
     MAX_MESSAGE_LENGTH: Final[int] = 1500
     MAX_NICKNAME_LENGTH: Final[int] = 32
+    # Local application-level abuse protection (spam prevention throttle).
+    # Discord API rate limits are handled dynamically by discord.py.
     GUILD_RATE_LIMIT_REQUESTS: Final[int] = 5
     GUILD_RATE_LIMIT_WINDOW_SECONDS: Final[float] = 1.0
     LOG_FILE_MAX_BYTES: Final[int] = 512 * 1024 * 1024
 
     # File paths
     BASE_DIR: Final[Path] = Path(__file__).parent
-    BLACKLIST_FILE: Final[Path] = BASE_DIR / "blacklist.csv"
-    DB_FILE: Final[Path] = BASE_DIR / "data.sqlite3"
+    DATA_DIR: Final[Path] = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
+    BLACKLIST_FILE: Final[Path] = DATA_DIR / "blacklist.csv"
+    DB_FILE: Final[Path] = DATA_DIR / "data.sqlite3"
 
     # Command settings
     REACTION_TIMEOUT: Final[float] = 20.0
