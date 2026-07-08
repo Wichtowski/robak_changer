@@ -1,6 +1,7 @@
 # robak_changer
 
 Discord nickname bot for generating and managing server nicknames.
+![robal](https://raw.githubusercontent.com/Wichtowski/robak_changer/refs/heads/main/ta.jpg)
 
 ## Setup
 
