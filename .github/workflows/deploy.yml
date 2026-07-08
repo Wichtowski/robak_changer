@@ -46,7 +46,6 @@ jobs:
             --exclude=*.log \
             --exclude=logs \
             --exclude=__pycache__ \
-            --exclude=project-audit-context.tar.gz \
             -czf "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" .
 
           cp "${RUNNER_TEMP}/${{ env.DEPLOY_ARCHIVE }}" "${{ env.DEPLOY_ARCHIVE }}"
